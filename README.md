@@ -8,7 +8,8 @@ The Resource Utilization Tracking System is designed to monitor and record syste
 
 The system integrates several technologies, including Python, Go, Apache Airflow, Apache Kafka, and Apache Cassandra, to collect, process, transmit, and store system metrics efficiently.
 
-https://raw.githubusercontent.com/ZeusDevEng/Resource-Utilization-Tracking/main/diagram%20illustrating%20the%20flow%20of%20data%20in%20a%20Resource%20Utilization%20Tracking%20System.webp
+![Alt text for image](https://raw.githubusercontent.com/ZeusDevEng/Resource-Utilization-Tracking/main/diagram%20illustrating%20the%20flow%20of%20data%20in%20a%20Resource%20Utilization%20Tracking%20System.webp)
+
 
 ### **Components:**
 
