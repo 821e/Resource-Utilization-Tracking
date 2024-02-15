@@ -5,6 +5,17 @@ import psutil
 import platform
 from airflow.utils.dates import days_ago
 import logging
+from kafka import KafkaProducer  # Corrected import
+import json
+
+# Correctly placed Kafka Producer Setup
+def create_kafka_producer():
+    return KafkaProducer(
+        bootstrap_servers=['localhost:9092'],
+        value_serializer=lambda x: json.dumps(x).encode('utf-8')
+    )
+
+
 
 
 def get_os_info():
@@ -42,31 +53,48 @@ def get_network_io():
     }
 
 def monitor_system():
-    """Function to log system metrics, adapted for Airflow task with improved logging."""
-    logging.info(f"Operating System: {get_os_info()}")
-    logging.info(f"\nCPU Usage: {get_cpu_usage()}%")
-    memory_usage = get_memory_usage()
-    logging.info(f"Memory Usage: {memory_usage['used']} / {memory_usage['total']} ({memory_usage['percentage']})")
-    disk_usage = get_disk_usage()
-    logging.info(f"Disk Usage: {disk_usage['used']} / {disk_usage['total']} ({disk_usage['percentage']})")
-    network_io = get_network_io()
-    logging.info(f"Network I/O: Sent {network_io['bytes_sent']}, Received {network_io['bytes_recv']}")
+    """Function to collect system metrics and send them to Kafka."""
+    producer = create_kafka_producer()
+    topic_name = 'system_metrics'  # Ensure this topic exists in Kafka
 
-# Use a context manager to define the DAG
+    # Collect metrics
+    system_info = {
+        "os_info": get_os_info(),
+        "cpu_usage": get_cpu_usage(),
+        "memory_usage": get_memory_usage(),
+        "disk_usage": get_disk_usage(),
+        "network_io": get_network_io(),
+        "timestamp": datetime.now().isoformat()  # Optional: Add a timestamp
+    }
+
+    # Send the data to Kafka
+    try:
+        producer.send(topic_name, system_info).get(timeout=10) 
+        logging.info("System metrics sent to Kafka successfully.")
+    except Exception as e:
+        logging.error(f"Failed to send system metrics to Kafka: {e}")
+    finally:
+        producer.flush()
+    # Log the action
+    logging.info("System metrics sent to Kafka successfully.")
+
+# Airflow DAG and Task Configuration
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': days_ago(1),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=1),
+}
+
 with DAG(
-    'system_monitoring',
-    default_args={
-        'owner': 'airflow',
-        'depends_on_past': False,
-        'start_date': days_ago(1),
-        'email_on_failure': False,
-        'email_on_retry': False,
-        'retries': 1,
-        'retry_delay': timedelta(minutes=1),
-    },
-    description='A simple DAG to monitor system metrics',
-    schedule_interval=timedelta(minutes=5),  # Adjust to your preferred interval
-    catchup=False,  # Prevents backfilling
+    'system_monitoring_kafka',
+    default_args=default_args,
+    description='DAG for monitoring system metrics and sending them to Kafka',
+    schedule_interval=timedelta(minutes=5), 
+    catchup=False,
 ) as dag:
 
     monitor_task = PythonOperator(
