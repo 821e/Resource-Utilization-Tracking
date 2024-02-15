@@ -8,6 +8,8 @@ The Resource Utilization Tracking System is designed to monitor and record syste
 
 The system integrates several technologies, including Python, Go, Apache Airflow, Apache Kafka, and Apache Cassandra, to collect, process, transmit, and store system metrics efficiently.
 
+![DALL·E 2024-02-15 12.19.40 - Create a simple diagram illustrating the flow of data in a Resource Utilization Tracking System. The diagram should include the following components_ .webp](https://prod-files-secure.s3.us-west-2.amazonaws.com/8762a7f1-fcbc-41bc-9cd6-92ade6c47e8d/c5ece942-4325-44f7-ab14-fc2e0e234fb9/DALLE_2024-02-15_12.19.40_-_Create_a_simple_diagram_illustrating_the_flow_of_data_in_a_Resource_Utilization_Tracking_System._The_diagram_should_include_the_following_components__.webp)
+
 ### **Components:**
 
 1. **Metric Collection Agents**:
