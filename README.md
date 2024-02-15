@@ -138,4 +138,134 @@ The system integrates several technologies, including Python, Go, Apache Airflow
 
 ## **Usage**
 
-- **Metric Collection**: Configured to run periodically via Airflow, the Python script
+### **Metric Collection**
+
+The metric collection agents are Python scripts deployed on various servers or devices. These scripts gather key system metrics such as CPU usage, memory utilization, disk activity, and network I/O.
+
+**Example**: Collecting CPU usage percentage.
+
+```python
+import psutil
+
+def collect_cpu_usage():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    return cpu_usage
+```
+
+This function can be scheduled to run at regular intervals using Apache Airflow to continuously monitor the system's CPU usage.
+
+**Scheduling with Apache Airflow**
+
+Apache Airflow schedules and executes the metric collection tasks. An Airflow DAG (Directed Acyclic Graph) is defined to periodically call the metric collection scripts.
+
+**Example**: Defining an Airflow DAG to collect metrics every 5 minutes.
+
+```python
+from airflow import DAG
+from airflow.operators.python_operator import PythonOperator
+from datetime import datetime, timedelta
+
+default_args = {
+    'owner': 'airflow',
+    'retries': 1,
+    'retry_delay': timedelta(minutes=1),
+    'start_date': datetime(2024, 1, 1),
+}
+
+dag = DAG(
+    'collect_system_metrics',
+    default_args=default_args,
+    description='DAG to collect system metrics',
+    schedule_interval=timedelta(minutes=5),
+)
+
+def task_collect_metrics():
+    # Placeholder for metric collection logic
+    print("Collecting metrics...")
+
+collect_metrics_operator = PythonOperator(
+    task_id='collect_metrics',
+    python_callable=task_collect_metrics,
+    dag=dag,
+)
+```
+
+**Data Transmission with Apache Kafka**
+
+The collected metrics are sent to a Kafka topic, serving as a robust, scalable queue that buffers the data before it's processed and stored.
+
+**Example**: Python script snippet to send metrics to Kafka.
+
+```python
+from kafka import KafkaProducer
+import json
+
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda x: json.dumps(x).encode('utf-8')
+)
+
+def send_metrics_to_kafka(metrics):
+    producer.send('system_metrics', metrics)
+    producer.flush()
+
+metrics = {"cpu_usage": collect_cpu_usage()}
+send_metrics_to_kafka(metrics)
+```
+
+### **Data Storage in Apache Cassandra**
+
+Apache Cassandra stores the metrics data for long-term analysis. It's designed to handle large volumes of data across many commodity servers, providing high availability with no single point of failure.
+
+**Example**: Cassandra table schema for storing system metrics.
+
+```sql
+CREATE TABLE system_metrics (
+    id uuid PRIMARY KEY,
+    timestamp timestamp,
+    cpu_usage double,
+    memory_usage double,
+    disk_usage double,
+    network_io_recv double,
+    network_io_sent double
+);
+```
+
+### **Data Processing and Aggregation with Go**
+
+A Go application acts as a Kafka consumer, processing and storing the incoming metrics data into Cassandra.
+
+**Example**: Go snippet to consume metrics from Kafka and insert into Cassandra.
+
+```go
+package main
+
+import (
+    "github.com/gocql/gocql"
+    "github.com/confluentinc/confluent-kafka-go/kafka"
+    "encoding/json"
+)
+
+func main() {
+    // Kafka consumer setup (omitted for brevity)
+
+    // Cassandra session setup (omitted for brevity)
+
+    for {
+        msg, err := consumer.ReadMessage(-1)
+        if err == nil {
+            var metric map[string]float64
+            json.Unmarshal(msg.Value, &metric)
+            
+            // Insert the metric into Cassandra (pseudo-code)
+            // session.Query(`INSERT INTO system_metrics (...) VALUES (...)`, ...).Exec()
+        }
+    }
+}
+```
+
+### **Usage Scenarios**
+
+- **Performance Monitoring**: Continuously track system performance across multiple servers, identifying trends and potential bottlenecks.
+- **Capacity Planning**: Analyze historical data to make informed decisions on scaling resources up or down.
+- **Alerting**: Implement logic to trigger alerts based on specific thresholds, such as CPU usage exceeding 90% for an extended period.
