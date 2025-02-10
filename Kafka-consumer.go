@@ -17,14 +17,14 @@ type MetricDetail struct {
 }
 
 type SystemMetric struct {
-    ID          string             `json:"id"`
-    DeviceType  string             `json:"device_type"`
-    Timestamp   time.Time          `json:"timestamp"`
-    CPUUsage    float64           `json:"cpu_usage"`
-    MemoryUsage float64           `json:"memory_usage"`
-    DiskUsage   float64           `json:"disk_usage"`
-    NetworkIO   map[string]float64 `json:"network_io"`
-    OSInfo      map[string]string  `json:"os_info"`
+	ID          string             `json:"id"`
+	DeviceType  string             `json:"device_type"`
+	Timestamp   time.Time          `json:"timestamp"`
+	CPUUsage    float64            `json:"cpu_usage"`
+	MemoryUsage float64            `json:"memory_usage"`
+	DiskUsage   float64            `json:"disk_usage"`
+	NetworkIO   map[string]float64 `json:"network_io"`
+	OSInfo      map[string]string  `json:"os_info"`
 }
 
 func main() {

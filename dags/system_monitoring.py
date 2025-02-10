@@ -7,6 +7,9 @@ from airflow.utils.dates import days_ago
 import logging
 from kafka import KafkaProducer  # Corrected import
 import json
+import paramiko
+from config import DEVICES
+from remote_collector import RemoteCollector
 
 # Correctly placed Kafka Producer Setup
 def create_kafka_producer():
@@ -87,12 +90,10 @@ def monitor_system():
     producer = create_kafka_producer()
     topic_name = 'system_metrics'
 
-    # Get device type
-    device_type = get_device_type()
-
-    # Collect metrics
-    system_info = {
-        "device_type": device_type,
+    # Collect host metrics
+    host_metrics = {
+        "device_type": get_device_type(),
+        "device_name": DEVICES['host']['name'],
         "os_info": get_os_info(),
         "cpu_usage": get_cpu_usage(),
         "memory_usage": get_memory_usage(),
@@ -101,14 +102,41 @@ def monitor_system():
         "timestamp": datetime.now().isoformat()
     }
 
-    # Send the data to Kafka
+    # Send host metrics to Kafka
     try:
-        producer.send(topic_name, system_info).get(timeout=10) 
-        logging.info("System metrics sent to Kafka successfully.")
+        producer.send(topic_name, host_metrics).get(timeout=10)
+        logging.info(f"Host metrics sent to Kafka successfully for {DEVICES['host']['name']}")
     except Exception as e:
-        logging.error(f"Failed to send system metrics to Kafka: {e}")
-    finally:
-        producer.flush()
+        logging.error(f"Failed to send host metrics to Kafka: {e}")
+
+    # Collect and send metrics for remote devices
+    for device in DEVICES['remote_devices']:
+        try:
+            collector = RemoteCollector(
+                device['host'],
+                device['port'],
+                device['username'],
+                device.get('key_file')
+            )
+            
+            remote_metrics = collector.get_metrics()
+            device_info = {
+                "device_type": "Remote-Device",
+                "device_name": device['name'],
+                "os_info": collector.execute_command("python3 -c 'import platform; print(platform.system() + \" \" + platform.release())'"),
+                **remote_metrics,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            producer.send(topic_name, device_info).get(timeout=10)
+            logging.info(f"Metrics sent to Kafka successfully for {device['name']}")
+            collector.close()
+            
+        except Exception as e:
+            logging.error(f"Failed to collect metrics from {device['name']}: {e}")
+
+    producer.flush()
+
     # Log the action
     logging.info("System metrics sent to Kafka successfully.")
 

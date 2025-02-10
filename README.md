@@ -238,6 +238,22 @@ CREATE TABLE system_metrics (
 );
 ```
 
+#### Querying Device-Specific Data
+-- Query metrics for a specific device
+SELECT * FROM metrics.system_metrics 
+WHERE device_name = 'server1' 
+AND timestamp > '2024-01-01' 
+LIMIT 100;
+
+-- Compare CPU usage across devices
+SELECT device_name, cpu_usage, timestamp 
+FROM metrics.system_metrics 
+WHERE timestamp > dateOf(now()) - 3600
+ALLOW FILTERING;
+
+
+
+
 ### **Data Processing and Aggregation with Go**
 
 A Go application acts as a Kafka consumer, processing and storing the incoming metrics data into Cassandra.
@@ -271,8 +287,35 @@ func main() {
 }
 ```
 
+## **Multi-Device Monitoring Setup**
+
+The system supports monitoring multiple devices simultaneously, including both the host machine and remote devices.
+
+### **Remote Device Configuration**
+
+1. **Create Configuration File**:
+   Create a `config.py` file in the `dags` directory to specify your devices:
+   ```python
+   DEVICES = {
+       'host': {
+           'type': 'local',
+           'name': 'host_machine'
+       },
+       'remote_devices': [
+           {
+               'name': 'server1',
+               'host': '192.168.1.100',
+               'port': 22,
+               'username': 'admin',
+               'key_file': '/path/to/ssh/key'  # Optional: Use password authentication instead
+           }
+       ]
+   }
+
 ### **Usage Scenarios**
 
 - **Performance Monitoring**: Continuously track system performance across multiple servers, identifying trends and potential bottlenecks.
 - **Capacity Planning**: Analyze historical data to make informed decisions on scaling resources up or down.
 - **Alerting**: Implement logic to trigger alerts based on specific thresholds, such as CPU usage exceeding 90% for an extended period.
+
+
