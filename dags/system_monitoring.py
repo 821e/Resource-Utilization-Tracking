@@ -52,19 +52,53 @@ def get_network_io():
         "bytes_recv": f"{net_io.bytes_recv / (1024**2):.2f} MB"
     }
 
+def get_device_type():
+    """Determine the type of device (VM, VPC, Physical, Cloud)"""
+    try:
+        # Check for common virtualization markers
+        with open('/proc/cpuinfo') as f:
+            cpuinfo = f.read()
+        
+        if os.path.exists('/.dockerenv'):
+            return 'Container'
+        elif os.path.exists('/sys/hypervisor/type'):
+            with open('/sys/hypervisor/type') as f:
+                hypervisor = f.read().strip()
+            return f'VM-{hypervisor}'
+        elif 'hypervisor' in cpuinfo.lower():
+            return 'VM-Unknown'
+        elif os.path.exists('/sys/class/dmi/id/product_uuid'):
+            # Check for cloud provider specific metadata
+            try:
+                requests.get('http://169.254.169.254/latest/meta-data/', timeout=1)
+                return 'AWS-Instance'
+            except:
+                try:
+                    requests.get('http://metadata.google.internal', timeout=1)
+                    return 'GCP-Instance'
+                except:
+                    return 'Physical-Machine'
+        return 'Physical-Machine'
+    except:
+        return 'Unknown'
+
 def monitor_system():
     """Function to collect system metrics and send them to Kafka."""
     producer = create_kafka_producer()
-    topic_name = 'system_metrics'  # Ensure this topic exists in Kafka
+    topic_name = 'system_metrics'
+
+    # Get device type
+    device_type = get_device_type()
 
     # Collect metrics
     system_info = {
+        "device_type": device_type,
         "os_info": get_os_info(),
         "cpu_usage": get_cpu_usage(),
         "memory_usage": get_memory_usage(),
         "disk_usage": get_disk_usage(),
         "network_io": get_network_io(),
-        "timestamp": datetime.now().isoformat()  # Optional: Add a timestamp
+        "timestamp": datetime.now().isoformat()
     }
 
     # Send the data to Kafka

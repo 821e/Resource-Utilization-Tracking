@@ -108,10 +108,14 @@ The system integrates several technologies, including Python, Go, Apache Airflow
     CREATE KEYSPACE metrics WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};
     CREATE TABLE metrics.system_metrics (
         id UUID PRIMARY KEY,
+        device_type TEXT,
         timestamp TIMESTAMP,
         cpu_usage DOUBLE,
         memory_usage DOUBLE,
-        disk_usage DOUBLE
+        disk_usage DOUBLE,
+        network_io_recv DOUBLE,
+        network_io_sent DOUBLE,
+        os_info MAP<TEXT, TEXT>
     );
     ```
     
